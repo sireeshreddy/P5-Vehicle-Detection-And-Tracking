@@ -173,7 +173,105 @@ Some other settings resulted in higher test accuracy of 100% which I presumed wa
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-The code for the sliding window search is implemented in code cell 8 which I obtained from the lessons. I tried different scales ranging from 1 all the way till 2.5 and an overlap of 0.5 over the entire road surface 400 - 650 pixels. A scale of 1.6 gave optimal results.
+The code for the sliding window search is implemented in code cell 8 which I obtained from the lessons. 
+```
+out_images = []
+out_maps = []
+out_titles = []
+out_boxes = []
+ystart = 400
+ystop = 650
+# Scale entire image and subsample the array
+scale = 1.6
+
+for img_src in test_images:
+    img_boxes = []
+    img = mpimg.imread(img_src)
+    draw_img = np.copy(img)
+    
+    # Make a heat map
+    heatmap = np.zeros_like(img[:,:,0])
+    img = img.astype(np.float32) / 255
+    
+    img_tosearch = img[ystart:ystop,:,:]
+    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2YCrCb')
+    
+    if scale != 1:
+        imshape = ctrans_tosearch.shape
+        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1]/scale), np.int(imshape[0]/scale)))
+        
+    ch1 = ctrans_tosearch[:,:,0]
+    ch2 = ctrans_tosearch[:,:,1]
+    ch3 = ctrans_tosearch[:,:,2]
+   
+    # Use // to remove floating points from results
+    nxblocks = (ch1.shape[1] // pix_per_cell) - 1
+    nyblocks = (ch1.shape[0] // pix_per_cell) - 1
+    
+    nfeat_per_block = orient * cell_per_block**2
+    window = 64
+    nblocks_per_window = (window // pix_per_cell) - 1
+    cells_per_step = 2
+    nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
+    nysteps = (nyblocks - nblocks_per_window) // cells_per_step
+    
+    # Compute individual channel HOG features for the entire image
+    hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    
+    for xb in range(nxsteps):
+        for yb in range(nysteps):
+            ypos = yb * cells_per_step
+            xpos = xb * cells_per_step
+            
+            hog_feat1 = hog1[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_feat2 = hog2[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_feat3 = hog3[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
+            
+            xleft = xpos * pix_per_cell
+            ytop = ypos * pix_per_cell
+            
+            # Extract the image patch   
+            subimg = cv2.resize(ctrans_tosearch[ytop:ytop + window, xleft:xleft + window], (64,64))
+          
+            # Get color features
+            spatial_features = bin_spatial(subimg, size=spatial_size)
+            hist_features = color_hist(subimg, nbins=hist_bins)
+            
+            # Scale features and make a prediction
+            test_features = X_scaler.transform(np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))    
+   
+            test_prediction = svc.predict(test_features)
+            
+            if test_prediction == 1:
+                xbox_left = np.int(xleft * scale)
+                ytop_draw = np.int(ytop * scale)
+                win_draw = np.int(window * scale)
+                cv2.rectangle(draw_img,(xbox_left, ytop_draw + ystart),(xbox_left + win_draw, ytop_draw + win_draw + ystart),(0,0,255),6)
+                img_boxes.append(((xbox_left, ytop_draw +  ystart),(xbox_left + win_draw, ytop_draw + win_draw + ystart)))
+                heatmap[ytop_draw + ystart:ytop_draw + win_draw + ystart, xbox_left:xbox_left + win_draw] +=1
+                
+    
+    out_images.append(draw_img)
+    
+    out_titles.append('Test Image' + str(img_src[16:]))
+    out_titles.append('Test Image' + str(img_src[16:]))
+    
+    
+    out_images.append(heatmap)
+    out_maps.append(heatmap)
+    out_boxes.append(img_boxes)
+#    mpimg.imsave('./output_images/heatmap' + str(img_src[16:]), heatmap)
+#    mpimg.imsave('./output_images/bboxes' + str(img_src[16:]), draw_img)
+    
+fig = plt.figure(figsize = (12,24))
+visualize(fig, 8, 2, out_images, out_titles) 
+fig.savefig('./output_images/bboxes_and_heat.jpg')
+
+```
+I tried different scales ranging from 1 all the way till 2.5 and an overlap of 0.5 over the entire road surface 400 - 650 pixels. A scale of 1.6 gave optimal results.
 
 ![alt text][image3]
 
