@@ -16,9 +16,10 @@ The goals / steps of this project are the following:
 [image2]: ./output_images/hog.jpg
 [image3]: ./output_images/sliding_window.jpg
 [image4]: ./output_images/sliding_window.jpg
-[image5]: ./output_images/bboxes_and_heat.jpg
+[image5]: ./output_images/bboxes_and_heat.png
 [image6]: ./output_images/labels_map.png
 [image7]: ./output_images/output_bboxes.png
+[image8]: ./output_images/bboxes_and_heat.jpg
 [video1]: ./project_video.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
@@ -280,6 +281,7 @@ I tried different scales ranging from 1 all the way till 2.5 and an overlap of 0
 To get an optimum result I used the feature extraction parameters described in the 'Training' section above. I used the YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result. Here are some example images of the result I achieved:
 
 ![alt text][image4]
+![alt text][image8]
 ---
 
 ### Video Implementation
@@ -296,17 +298,13 @@ Although I defined a method to apply a threshold to the heatmap, I eventually en
 Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
 
 ### Here are six frames and their corresponding heatmaps:
-
 ![alt text][image5]
-
 ### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
 ![alt text][image6]
-
 ### Here the resulting bounding boxes are drawn onto the last frame in the series:
 ![alt text][image7]
 
 ---
-
 ### Discussion
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
