@@ -79,7 +79,84 @@ I tried various combinations of parameters and found that the YUV and YCrCb colo
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-I trained a linear SVM using HOG, color bin and color histogram features in code cell 5. My final model was a Linear SVM trained on:
+I trained a linear SVM using HOG, color bin and color histogram features in code cell 5. 
+```
+# Define feature parameters and test HOG classify using 500 car images and 500 non car images
+
+color_space = 'YCrCb'
+orient = 9
+pix_per_cell = 6
+cell_per_block = 2
+hog_channel = 'ALL'
+spatial_size = (32, 32)
+hist_bins = 32
+spatial_feat = True
+hist_feat = True
+hog_feat = True
+
+t = time.time()
+n_samples = 1000
+# Generate 1000 random indices
+random_idxs = np.random.randint(0 , len(cars), n_samples)
+test_cars = np.array(cars)[random_idxs]
+test_notcars = np.array(notcars)[random_idxs]
+
+car_features = extract_features(test_cars,
+                               color_space = color_space,
+                               spatial_size = spatial_size,
+                               hist_bins = hist_bins,
+                               orient = orient,
+                               pix_per_cell = pix_per_cell,
+                               cell_per_block = cell_per_block,
+                               hog_channel = hog_channel,
+                               spatial_feat = spatial_feat,
+                               hist_feat = hist_feat,
+                               hog_feat = hog_feat
+                               )
+
+notcar_features = extract_features(test_notcars,
+                               color_space = color_space,
+                               spatial_size = spatial_size,
+                               hist_bins = hist_bins,
+                               orient = orient,
+                               pix_per_cell = pix_per_cell,
+                               cell_per_block = cell_per_block,
+                               hog_channel = hog_channel,
+                               spatial_feat = spatial_feat,
+                               hist_feat = hist_feat,
+                               hog_feat = hog_feat
+                               )
+
+print(time.time()-t, 'Seconds to compute features...')
+
+X = np.vstack((car_features, notcar_features)).astype(np.float64)
+X_scaler = StandardScaler().fit(X)
+scaled_X = X_scaler.transform(X)
+
+y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
+
+rand_state = np.random.randint(0, 100)
+X_train, X_test, y_train, y_test = train_test_split(scaled_X,
+                                                   y,
+                                                   test_size = 0.1,
+                                                   random_state = rand_state
+                                                   )
+print('Using the following feature parameters ', '\n', color_space, 'Color Space', '\n', orient,' Orientations, ', '\n',
+      pix_per_cell,'Pixels per cell ', '\n', cell_per_block,'Cells per block', '\n', hog_channel, 'HOG Channel', '\n', 
+     spatial_size, 'Spatial Size', '\n', hist_bins, 'Hist Bins')
+print('Feature vector length : ', len(X_train[0]))
+
+# Use SVC
+svc = LinearSVC()
+
+t = time.time()
+svc.fit(X_train, y_train)
+print(round(time.time() -t, 2 ), "Seconds to train SVC...")
+
+print('Test accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
+```
+
+My final model was a Linear SVM trained on:
 YCrCb Color Space, 
 9  Orientations, 
 6 Pixels per cell, 
@@ -89,7 +166,7 @@ Spatial Size of (32, 32),
 Histogram features with 32 Bins. 
 This resulted in a test accuracy of 99.5%. 
 
-Some other settings resulted in higher test accuracy of 1 which I presumed was a sign of overfitting.
+Some other settings resulted in higher test accuracy of 100% which I presumed was a sign of overfitting.
 
 
 ### Sliding Window Search
@@ -130,13 +207,14 @@ Here's an example result showing the heatmap from a series of frames of video, t
 ### Here the resulting bounding boxes are drawn onto the last frame in the series:
 ![alt text][image7]
 
-
-
 ---
 
 ### Discussion
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-As is the case with any computer vision application, the biggest challenge is to identify the ideal parameters. Identifying the right colorspace and parameters was tricky as they did not always perform as expected. The YUV space gave similar results to the YCrCb colorspce while training. However, it did not perform as well on the final test video. Also, the train/test data was probably overfitting since the final video does not match the accuracy of 99.5% that was obtained upon testing of the trained model
+As is the case with any computer vision application, the biggest challenge is to identify the ideal parameters. Identifying the right colorspace and parameters was tricky as they did not always perform as expected. 
+The YUV space gave similar results to the YCrCb colorspce while training. However, it did not perform as well on the final test video. Also, the train/test data was probably overfitting since the final video does not match the accuracy of 99.5% that was obtained upon testing of the trained model. 
+
+One other avenue to speedup the pipeline as well as avoid false positives would be to isolate the region of interest to just the lanes in the direction of traffic and ignore cars on the other side of the freeway.
 
 The biggest hurdle for the current pipeline is the computing time. It will have to process the frames in real-time if it has to have any real world application.
